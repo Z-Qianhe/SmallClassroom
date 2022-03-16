@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<form action="/pay/test" method="post" name="alipayment">
+    <div>
+        <dl>
+            <dt>商户的订单号：(必填)</dt>
+            <dd>
+                <input id="wIDout_trade_no" name="wIDout_trade_no">
+            </dd>
+            <hr>
+            <dt>订单名称:(必填)</dt>
+            <dd>
+                <input id="wIDsubject" name="wIDsubject">
+            </dd>
+            <hr>
+            <dt>付款金额:(必填)</dt>
+            <dd>
+                <input id="wIDtotal_amount" name="wIDtotal_amount">
+            </dd>
+            <hr>
+            <dt></dt>
+            <dd>
+                <span>
+                    <button type="submit">付  款</button>
+                </span>
+                <span>如果您点击了"付款"按钮，即表示您同意该次的执行操作</span>
+            </dd>
+        </dl>
+    </div>
+</form>
+</body>
+</html>

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册</title>
+    <link rel="shortcut icon" href="../../favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="../../element-ui-2.13.0/lib/theme-chalk/index.css" />
+    <link rel="stylesheet" type="text/css" href="../../css/reset.css" />
+    <link rel="stylesheet" type="text/css" href="../../css/register.css" />
+    <script src="../../js/vue-v2.6.10.js"></script>
+    <script src="../../js/axios-0.18.0.js"></script>
+    <script src="../../element-ui-2.13.0/lib/index.js"></script>
+
+</head>
+
+<body>
+    <div id="app">
+        <div class="pos">
+            <div class="login">
+                <span class="close iconfont icon-close"></span>
+                <img src="../../img/login/loginlogo.png" alt="">
+                <ul>
+                    <li></li>
+                    <li style="margin-bottom: 40px;font-size: 16px;color: red;" v-text="msg"></li>
+                    <li></li>
+                </ul>
+                <form action="" method="post" >
+                    <input type="text" v-model="ruleForm.name" @blur="checkName" placeholder="请输入姓名">
+                    <input type="text" v-model="ruleForm.phone" @blur="checkPhone" placeholder="请输入您的手机号">
+                    <input type="password" v-model="ruleForm.password" @blur="checkPassword" placeholder="请输入密码">
+                    <input type="text" class="yanzhen"  v-model="code" @blur="checkCode" placeholder="请输入验证码" >
+                    <span class="yanzhenma" v-text="initCode" @click="createCode"></span>
+                    <div class="clear"></div>
+                    <div class="loginbtn" style="margin-left: 110px;line-height: 40px;" @click="register">注册</div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    new Vue({
+        el: "#app",
+        data: {
+            ruleForm:{
+                name:'',
+                password:'',
+                phone:''
+            },
+            msg:'',
+            code:'',
+            initCode:'',
+            code_flag : false,
+            name_flag : false,
+            phone_flage : false,
+            password_flag : false
+        },
+        methods: {
+            createCode(){
+                //创建一个验证码生成对应字典
+                var str = "023456789abcdefghjkmnopqrstuvwxyzABCDEFGHJKMNOPQRSTUVWXYZ";
+                //创建一个验证码数据的变量
+                var code="";
+                //循环随机生成验证码
+                for (var i=0;i<4;i++){
+                    //随机生成一个索引
+                    var index = Math.floor(Math.random()*str.length);
+                    //使用随机索引在str中获取一个值 将值放入到code中
+                    code += str.charAt(index);
+                }
+                //将随机生成的验证码赋值给验证码初始值
+                this.initCode = code;
+            },
+            checkCode(){
+                //对比验证码的方法 判断验证码是否为空
+                if (this.code == null||this.code.trim()==""){
+                    //提示错误信息
+                    this.msg = "验证码不能为空";
+                    //设置验证码验证失败
+                    this.code_flag = false;
+                }else {
+                    //对验证码进行对比
+                    if (this.code.toLowerCase() == this.initCode.toLowerCase()){
+                        //验证码输入正确
+                        this.msg = "";
+                        //设置验证码判断成功
+                        this.code_flag = true;
+                    }else {
+                        //验证码输入有问题
+                        this.msg = "验证码输入错误";
+                        //设置验证码验证失败
+                        this.code_flag = false
+                    }
+                }
+            },
+            checkName(){
+                //判断名字是否为空或者空串
+                if(this.ruleForm.name == null || this.ruleForm.name.trim() == ""){
+                    //提示名字填写错误
+                    this.msg = "姓名不能为空哦";
+                    //将名字判断设置为不通过
+                    this.name_flag = false;
+                }else {
+                    //将消息设置为空
+                    this.msg = "";
+                    //将名字判断设置为通过
+                    this.name_flag = true;
+                }
+            },
+            checkPhone(){
+                //判断手机号是否填写
+                if (this.ruleForm.phone == null || this.ruleForm.phone.trim()==""){
+                    //提示信息
+                    this.msg = "手机号不能为空";
+                    //将判断结果设置为不通过
+                    this.phone_flage = false;
+                } else {
+                    //创建一个正则表达式
+                    var rule = /^1[3|4|5|7|8][0-9]{9}$/
+                    //使用正则判断手机号是否符合规定
+                    if (rule.test(this.ruleForm.phone)){
+                        //将手机号异步发送到后台进行查重判断 如果有手机号 不能注解
+                        axios.post('/user/checkPhone?phone='+this.ruleForm.phone).then(res=>{
+                            //简化操作  将后台传递结果赋值到手机验证结果
+                            this.phone_flage = res.data.flag;
+                            //将信息修改为后台传递结果
+                            this.msg = res.data.message;
+                        })
+                    }else{
+                        //正则匹配为成功  手机号输入的不符合规定
+                        this.msg = "请输入正确的手机号";
+                        //将判断结果设置为不通过
+                        this.phone_flage = false;
+                    }
+                }
+            },
+            checkPassword(){
+                //验证密码是否符合规定
+                if (this.ruleForm.password == null || this.ruleForm.password.trim() == ""){
+                    //提示错误信息
+                    this.msg = "密码不能为空";
+                    //设置密码不通过
+                    this.password_flag = false;
+                }else {
+                    //判断密码的位数
+                    if (this.ruleForm.password.length >= 6 && this.ruleForm.password.length<=12) {
+                        //密码设置通过
+                        this.msg = "";
+                        //设置密码通过
+                        this.password_flag = true;
+                    }else {
+                        //密码的长度符合规定
+                        this.msg = "密码必须是6-12位字符";
+                        //设置密码不通过
+                        this.password_flag = false;
+                    }
+                }
+            },
+            register(){
+                //用户注册的方法  判断前面所有的验证是否通过
+                if (this.name_flag && this.phone_flage && this.password_flag && this.code_flag){
+                    //异步提交数据
+                    axios({
+                        url : '/user/register',
+                        method:'post',
+                        data:this.ruleForm
+                    }).then(res=>{
+                        //判断注册是否成功
+                        if(res.data.flag){
+                            //弹窗成功的窗口
+                            this.$message({
+                                message:res.data.message,
+                                type:"success"
+                            });
+                            //注册成功后 跳转到登陆页面
+                            setTimeout("location.href='login.html'",1500);
+                        }else{
+                            //弹出失败的窗口
+                        this.$message({
+                            message:res.data.message,
+                            type:"error"
+                        })
+                        }
+                    })
+                }else{
+                    //消息显示数据错误不能注册
+                    this.msg = "请认真填写数据";
+                }
+            }
+        },
+        created() {
+            //调用验证码生成的方法
+            this.createCode();
+        }
+
+    })
+</script>
+
+
+</html>

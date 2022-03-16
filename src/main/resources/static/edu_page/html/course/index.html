@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title></title>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="../../element-ui-2.13.0/lib/theme-chalk/index.css" />
+	<script type="text/javascript" src="../../vue/vue-v2.6.10.js"></script>
+	<script type="text/javascript" src="../../element-ui-2.13.0/lib/index.js"></script>
+	<script type="text/javascript" src="../../vue/axios-0.18.0.js"></script>
+</head>
+
+<body>
+<div id="app">
+	<el-tag type="info" effect="dark" v-if="inputVisible" closable="true" :disable-transitions="disable"
+			@close="handleClose">课程管理</el-tag>
+	<div v-if="inputVisible">
+		<template>
+			<el-table :data="tableData" @selection-change="handleSelectionChange" size="medium"
+					  highlight-current-row="true" style="width: 100%">
+				<el-table-column type="selection" width="55" prop="cid">
+				</el-table-column>
+				<el-table-column width="100px" label="序号" type="index">
+				</el-table-column>
+				<el-table-column label="课程名称" prop="courseName">
+				</el-table-column>
+				<el-table-column label="课程类型" prop="courseType">
+					<template slot-scope="{row}">
+						<span v-if="row.courseType==1">Java</span>
+						<span v-if="row.courseType==2">数据库</span>
+						<span v-if="row.courseType==3">前端</span>
+					</template>
+				</el-table-column>
+				<el-table-column label="课程价格" prop="coursePrice">
+				</el-table-column>
+				<el-table-column label="状态">
+					<template slot-scope="{row}">
+						<el-tag v-if="row.status==0">未上架</el-tag>
+						<el-tag v-if="row.status==1" type="danger">上架</el-tag>
+						<el-tag v-if="row.status==2" type="danger">下架</el-tag>
+					</template>
+				</el-table-column>
+				<el-table-column label="操作">
+					<template slot-scope="scope">
+						<el-button size="mini" @click="handleEdit(scope.$index, scope.row)">修改</el-button>
+						<el-button size="mini" type="danger" @click="handleLook(scope.$index, scope.row)">详情</el-button>
+						<el-button size="mini" @click="addCourseDetail(scope.$index, scope.row)">添加明细</el-button>
+					</template>
+				</el-table-column>
+				<el-table-column align="left" width="200px">
+					<template slot="header" slot-scope="scope">
+						<el-input v-model="search" @blur="findAll()" size="mini" placeholder="输入课程名称或者类型搜索" />
+					</template>
+				</el-table-column>
+			</el-table>
+		</template>
+		<br />
+		<el-row>
+			<el-button type="warning" @click="delAll()">删除选中</el-button>
+
+			<a href="addCourse.html" target="main" style="text-decoration: none;color: white;">
+				<el-button type="primary">上传课程</el-button>
+			</a>
+
+		</el-row>
+		<template>
+			<div class="block" align="right">
+				<el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange"
+							   :current-page="currentPage" :page-sizes="[3, 4, 5, 6]" :page-size="pageSize"
+							   layout="total, sizes, prev, pager, next, jumper" :total="totalCount">
+				</el-pagination>
+			</div>
+		</template>
+
+	</div>
+
+	<!--修改课程-->
+	<el-dialog title="修改课程" :visible.sync="dialogFormVisible1" :close-on-click-modal="false">
+		<!--表单-->
+		<el-form :model="ruleForm" :rules="rules" ref="ruleForm" label-width="100px" class="demo-ruleForm">
+			<el-form-item label="课程名称" prop="courseName">
+				<el-input v-model="ruleForm.courseName" style="width: 210px;"></el-input>
+			</el-form-item>
+			<el-form-item label="课程简介" prop="descs">
+				<el-input v-model="ruleForm.descs" style="width: 210px;"></el-input>
+			</el-form-item>
+			<el-form-item label="课程类型" prop="courseType">
+				<el-select v-model="ruleForm.courseType" placeholder="请选择课程类型">
+					<el-option label="Java" :value="1"></el-option>
+					<el-option label="数据库" :value="2"></el-option>
+					<el-option label="前端" :value="3"></el-option>
+				</el-select>
+			</el-form-item>
+			<!--上传-->
+			<el-upload style="margin-left: 25px;" :on-remove="handleRemove" :on-exceed="handleExceed"
+					   :http-request="myUpload" class="upload-demo" ref="upload1"
+					   action="http://localhost/education/courses?method=uploadFile" :limit="1" :auto-upload="false">
+				<el-button slot="trigger" size="small" type="primary">选取图片</el-button>
+				<el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload(1)">上传到服务器
+				</el-button>
+			</el-upload>
+			<img :src="dialogImageUrl" style="width: 100px;height: 100px;margin-left: 25px;" alt="" />
+
+			<el-upload style="margin-left: 25px;" :on-remove="handleRemove" :on-exceed="handleExceed"
+					   :http-request="myUpload" class="upload-demo" ref="upload2"
+					   action="http://localhost/education/courses?method=uploadFile" :limit="1" :auto-upload="false">
+				<el-button slot="trigger" size="small" type="primary">选取视频</el-button>
+				<el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload(2)">上传到服务器
+				</el-button>
+			</el-upload>
+
+			<video controls autoplay muted="muted"
+				   style="width: 100px;height: 100px;margin-left: 25px;margin-top: 5px;" :src="dialogVedioUrl"></video>
+			<el-form-item label="课程价格" prop="coursePrice">
+				<el-input v-model="ruleForm.coursePrice" style="width: 210px;"></el-input>
+			</el-form-item>
+			<el-form-item label="状态" prop="status">
+				<el-radio-group v-model="ruleForm.status">
+					<el-radio :label="0">未上架</el-radio>
+					<el-radio :label="1">上架</el-radio>
+					<el-radio :label="2">下架</el-radio>
+				</el-radio-group>
+			</el-form-item>
+		</el-form>
+		<div slot="footer" class="dialog-footer">
+			<el-button @click="dialogFormVisible1 = false">取 消</el-button>
+			<el-button type="primary" @click="submitForm('ruleForm')">确 定</el-button>
+		</div>
+	</el-dialog>
+	<!--结尾-->
+
+	<!--查看课程-->
+	<el-dialog title="查看课程" :visible.sync="dialogFormVisible2">
+		<el-form ref="ruleForm" :model="ruleForm" label-width="80px">
+			<el-form-item label="课程名称">
+				<el-input v-model="ruleForm.courseName" style="width: 210px;" disabled></el-input>
+			</el-form-item>
+			<el-form-item label="课程简介">
+				<el-input v-model="ruleForm.descs" style="width: 210px;" disabled></el-input>
+			</el-form-item>
+			<el-form-item label="课程类型">
+				<el-select v-model="ruleForm.courseType" placeholder="请选择课程类型" disabled>
+					<el-option label="Java" :value="1"></el-option>
+					<el-option label="数据库" :value="2"></el-option>
+					<el-option label="前端" :value="3"></el-option>
+				</el-select>
+			</el-form-item>
+
+			<img :src="dialogImageUrl" style="width: 100px;height: 100px;margin-left: 25px;" alt="" />
+
+			<video controls autoplay muted="muted" style="width: 100px;height: 100px;margin-left: 25px;margin-top: 5px;" :src="dialogVedioUrl"></video>
+			<el-form-item label="课程价格">
+				<el-input v-model="ruleForm.coursePrice" style="width: 210px;" disabled></el-input>
+			</el-form-item>
+			<el-form-item label="状态">
+				<el-radio-group v-model="ruleForm.status" disabled>
+					<el-radio :label="0">未上架</el-radio>
+					<el-radio :label="1">上架</el-radio>
+					<el-radio :label="2">下架</el-radio>
+				</el-radio-group>
+			</el-form-item>
+		</el-form>
+	</el-dialog>
+	<!--结尾-->
+	<!--添加明细-->
+	<el-dialog title="课程明细" :visible.sync="dialogFormVisible3">
+		<el-form ref="ruleForm" :model="ruleForm" label-width="80px">
+			<el-form-item label="课程名称">
+				<el-input v-model="ruleForm.name" style="width: 210px;"></el-input>
+			</el-form-item>
+			<el-form-item label="所属课程">
+				<el-input v-model="ruleForm.courseName" style="width: 210px;" disabled></el-input>
+			</el-form-item>
+			<el-form-item label=所属章节>
+				<el-select v-model="ruleForm.type" placeholder="请选择所属章节">
+					<el-option label="第一章" :value="1"></el-option>
+					<el-option label="第二章" :value="2"></el-option>
+					<el-option label="第三章" :value="3"></el-option>
+				</el-select>
+			</el-form-item>
+
+			<el-form-item label="开课时间">
+				<el-col :span="7">
+					<el-date-picker type="date" value-format="yyyy-MM-dd" placeholder="开课日期"
+									v-model="ruleForm.startData" style="width: 100%;"></el-date-picker>
+				</el-col>
+			</el-form-item>
+
+			<el-upload style="margin-left: 25px;" :on-remove="handleRemove" :on-exceed="handleExceed"
+					   :http-request="myUpload" class="upload-demo" ref="upload3" :limit="1" :auto-upload="false">
+				<el-button slot="trigger" size="small" type="primary">选取视频</el-button>
+				<el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload(3)">上传到服务器
+				</el-button>
+			</el-upload>
+
+			<video controls autoplay muted="muted"
+				   style="width: 100px;height: 100px;margin-left: 25px;margin-top: 5px;" :src="detailVideoUrl"></video>
+		</el-form>
+		<div slot="footer" class="dialog-footer">
+			<el-button @click="dialogFormVisible3 = false">取 消</el-button>
+			<el-button type="primary" @click="detailForm()">确 定</el-button>
+		</div>
+	</el-dialog>
+	<!--结尾-->
+</div>
+</body>
+<script>
+	axios.defaults.withCredentials = true
+	new Vue({
+		el: "#app",
+		data: {
+			/*表格数据*/
+			tableData: [],
+			/*条件查询关键字*/
+			search: '',
+			//批量删除存放选中的复选框
+			multipleSelection: [],
+			//存放删除的数据
+			delarr: [],
+			//当前页
+			currentPage: 1,
+			//每页显示条数
+			pageSize: 5,
+			//总条数
+			totalCount: '',
+			//总页数
+			totalPage: '',
+			//修改的对话框
+			dialogFormVisible1: false,
+			//详情的对话框
+			dialogFormVisible2: false,
+			//课程详情添加的对话框
+			dialogFormVisible3: false,
+			/*文件上传*/
+			dialogImageUrl: '',
+			dialogVedioUrl: '',
+			detailVideoUrl: '',
+			//表单字段
+			ruleForm: {
+				cid: '',
+				courseName: '',
+				descs: '',
+				courseType: '',
+				coursePrice: '',
+				courseImage: '',
+				courseVideo: '',
+				status:'',
+				name:'',
+				type:'',
+				startData:''
+			},
+			/*校验规则*/
+			rules: {
+				courseName: [{
+					required: true,
+					message: '请输入课程名称',
+					trigger: 'blur'
+				},],
+				descs: [{
+					required: true,
+					message: '请选择课程简介',
+					trigger: 'blur'
+				}],
+				courseType: [{
+					required: true,
+					message: '请选择课程类型',
+					trigger: 'change'
+				}],
+				coursePrice: [{
+					required: true,
+					message: '请输入课程价格',
+					trigger: 'blur'
+				}],
+				status: [{
+					required: true,
+					message: '请至少选择一个状态',
+					trigger: 'change'
+				}]
+			},
+			/*选项卡*/
+			inputVisible: true,
+			disable: false
+		},
+		created(){
+			//页面加载后执行分页方法  展示数据
+			this.getCourseByPage();
+		},
+		methods: {
+			getCourseByPage(){
+				//创建一个向后台传递数据的对象
+				var param = {
+					currentPage :this.currentPage,
+					pageSize : this.pageSize,
+					queryString : this.search
+				};
+				//异步传递数据到后台  并且获取后台传递的分页数据
+				axios.post("/course/getCourseByPage",param).then( res => {
+					//判断是否获取到分页数据
+					if(res.data.flag){
+					//在vue中  做分页展示只需要做两个操作就可以  将总条数放入  将当前分页数据放入
+					//设置总条数
+					this.totalCount = res.data.data.totalCount;
+					//设置分页数据
+					this.tableData = res.data.data.rows;
+				}else {
+					//如果获取数据失败  弹窗
+					this.$message.error(res.data.message);
+				}
+			})
+			},
+			handleSizeChange: function (size) {
+				//通过修改默认条数达到切换条数目的
+				this.pageSize = size;
+				//重新调用分页的方法
+				this.getCourseByPage();
+			},
+			handleCurrentChange: function (currentPage) {
+				//currentPage  要跳转的页数   将当前页修改为要跳转页数
+				this.currentPage = currentPage;
+				//重新调用分页的方法
+				this.getCourseByPage();
+			},
+			findAll() {
+				//重新调用分页的方法
+				this.getCourseByPage();
+			},
+			handleClose() {
+				//关闭当前页面
+				this.inputVisible = false;
+			},
+			handleEdit(index, row) {
+				//展示修改的表单窗口
+				this.dialogFormVisible1 = true;
+				//将数据放入
+				this.ruleForm = JSON.parse(JSON.stringify(row));
+				//展示原来课程对应图片
+				this.dialogImageUrl = "/uploadFile/" + row.courseImage;
+				//展示原有的视频
+				this.dialogVedioUrl = "/uploadFile/" + row.courseVideo;
+			},
+			submitUpload(value) {
+				//点击开始上传文件   不是使用该方法上传的而是调用对应的方法
+				//判断到底上传的是图片还是视频还是课程详情的视频
+				if(value == 1){
+					//需要上传的是图片 使用ref值调用上传的方法
+					this.$refs['upload1'].submit();
+				}else if(value == 2){
+					//上传视频
+					this.$refs['upload2'].submit();
+				}else{
+					//上传课程详情的视频
+					this.$refs['upload3'].submit();
+				}
+			},
+			myUpload(content) {
+				//创建一个处理文件上传对象FormData
+				var formData = new FormData();
+				//在对象中将上传的文件添加
+				formData.append("file",content.file);
+				//使用异步上传文件
+				axios({
+					url : '/course/upload',
+					method : 'post',
+					data : formData
+				}).then( res => {
+					//判断是否上传成功
+					if(res.data.flag){
+					//判断上传的文件是视频还是图片
+					if(res.data.status == 1){
+						//上传的是图片
+						this.dialogImageUrl = res.data.data;
+					}else{
+						//上传的是视频
+						this.dialogVedioUrl = res.data.data;
+						//将课程详情的视频回显
+						this.detailVideoUrl = res.data.data;
+					}
+				}else {
+					//上传失败弹窗
+					this.$message.error(res.data.message);
+				}
+			})
+			},
+			handleRemove(file, fileList) {
+				//删除已经上传图片的方法
+				//创建一个变量 将要删除的文件名称得到
+				var fileName = file.name;
+				//截取文件名，将文件名的后缀截取到
+				fileName = fileName.substring(fileName.lastIndexOf("."));
+				//如果我们上传成功了  会在图片或者视频变量中存放上传成功的数据
+				if(this.dialogImageUrl.indexOf(fileName) != -1){
+					//表示我们需要删除的是图片  将文件名设置为图片展示名称
+					fileName = this.dialogImageUrl;
+					//将上传成功后展示设置为空
+					this.dialogImageUrl = "";
+				}else if (this.dialogVedioUrl.indexOf(fileName) != -1){
+					//表示我们需要删除的是视频 将文件名设置为视频的名称
+					fileName = this.dialogVedioUrl;
+					//将视频预览设置为null
+					this.dialogVedioUrl = "";
+					//将课程详情视频预览设置为null  新增的
+					this.detailVideoUrl = "";
+				}else {
+					//证明图片或者视频还没有进行上传
+					return;
+				}
+				//异步调用方法将图片或者视频删除
+				axios({
+					url:'/course/removeFile?fileName='+fileName,
+					method:'post'
+				}).then( res => {
+					//打印后台返回的消息
+					this.$message.success(res.data.message);
+			})
+			},
+			submitForm(formName) {
+				//验证数据
+				this.$refs['ruleForm'].validate( val => {
+					//验证结果判断
+					if(val){
+						//将回显的图片放入到表单中：
+						if(this.dialogImageUrl.length > 0){
+							//图片修改了
+							this.ruleForm.courseImage = this.dialogImageUrl;
+						}
+						if(this.dialogVedioUrl.length > 0){
+							//视频修改了
+							this.ruleForm.courseVideo = this.dialogVedioUrl;
+						}
+						//异步将数据提交到后台
+						axios({
+							url:'/course/editCourse',
+							method:'post',
+							data:this.ruleForm
+						}).then( res => {
+							//判断是否添加成功
+							if(res.data.flag){
+							//弹窗提示添加成功
+							this.$message.success(res.data.message);
+							//跳转到课程展示页
+							this.getCourseByPage();
+						}else {
+							//添加失败打印信息
+							this.$message.error(res.data.message);
+						}
+					})
+					}else{
+						//验证失败
+						this.$message.error("请认真填写数据！");
+			}
+			})
+			},
+			handleLook(index, row) {
+				//展示课程详情的对话框
+				this.dialogFormVisible2 = true;
+				//将数据放入
+				this.ruleForm = JSON.parse(JSON.stringify(row));
+				//展示原来课程对应图片
+				this.dialogImageUrl = "/uploadFile/" + row.courseImage;
+				//展示原有的视频
+				this.dialogVedioUrl = "/uploadFile/" + row.courseVideo;
+			},
+			handleSelectionChange(val) {
+				//val传递进来的数据就是复选框对应行的数据  将数据复制给vue定义的变量
+				this.multipleSelection = val;
+			},
+			delAll() {
+				//判断是否有选中多选框
+				if(this.multipleSelection.length <= 0){
+					//弹窗提示要选择数据
+					this.$message.error("请选择您要删除的数据！")
+					//结束方法
+					return;
+				}
+				//遍历选中对象集合
+				for (var i = 0; i < this.multipleSelection.length; i++) {
+					//将数据放入到存放删除id的集合汇总
+					this.delarr.push(this.multipleSelection[i].cid);
+				}
+				//创建一个提示框，让用户选择是否删除数据
+				this.$confirm("您是否确定要删除课程","提示",{type:"warning"}).then(() =>{
+					//确定要删除  异步将用户对应的id传递到后台
+					//join()  方法  将数组转化为字符串进行传输  在数组数据中添加,隔开
+					axios({
+							  url:"/course/delAll?cids="+this.delarr.join(),
+						method:"post",
+			}).then(res => {
+					//判断后台是否删除成功
+					if(res.data.flag){
+					//弹窗
+					this.$message.success(res.data.message);
+					//使用分页方法刷新数据
+					this.getCourseByPage();
+				}else{
+					//弹窗
+					this.$message.error(res.data.message);
+				}
+			})
+			})
+			},
+			addCourseDetail(index,row) {
+				//展示修改的表单窗口
+				this.dialogFormVisible3 = true;
+				//将数据放入
+				this.ruleForm = JSON.parse(JSON.stringify(row));
+			},
+			handleExceed(files, fileList) {
+				this.$message.warning(`当前限制选择 1 个文件，本次选择了 ${files.length} 个文件，共选择了 ${files.length + fileList.length} 个文件`);
+			},
+			detailForm(){
+				//将上传的视频地址添加到提交表单数据
+				this.ruleForm.url = this.detailVideoUrl;
+				//因为当前页面没有写课程详情的验证规则，验证就交给后台验证
+				axios({
+					url:'/coursedetail/addCourseDetail',
+					method:'post',
+					data:this.ruleForm
+				}).then(res => {
+					//根据后台返回的结果进行判断
+					if(res.data.flag){
+					//弹出消息
+					this.$message.success(res.data.message);
+					//关闭当前的课程详情添加的窗口
+					this.dialogFormVisible3 = false;
+					//调用分页的方法
+					this.getCourseByPage();
+				}else {
+					//弹窗
+					this.$message.error(res.data.message);
+				}
+			})
+			}
+		}
+	})
+</script>
+
+</html>

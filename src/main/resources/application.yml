@@ -1,0 +1,21 @@
+#配置数据源
+spring:
+  datasource:
+    driver-class-name: com.mysql.jdbc.Driver
+    url: jdbc:mysql:///uedu
+    password: 1234
+    username: root
+  servlet:
+    multipart:
+      max-file-size: 419430400
+      max-request-size: 419430400
+
+#���ô�ӡsql
+logging:
+  level:
+    com:
+      offcn:
+        mapper: debug
+
+
+

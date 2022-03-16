@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="../../element-ui-2.13.0/lib/theme-chalk/index.css" />
+    <script type="text/javascript" src="../../vue/vue-v2.6.10.js"></script>
+    <script type="text/javascript" src="../../element-ui-2.13.0/lib/index.js"></script>
+    <script type="text/javascript" src="../../vue/axios-0.18.0.js"></script>
+</head>
+
+<body>
+<div id="app">
+    <el-tag type="info" effect="dark" v-if="inputVisible" closable="true" :disable-transitions="disable"
+            @close="handleClose">用户课程管理</el-tag>
+    <div v-if="inputVisible">
+        <template>
+            <el-table
+                    :data="tableData.filter(data => !search || data.user.name.toLowerCase().includes(search.toLowerCase()))"
+                    style="width: 100%" @selection-change="handleSelectionChange">
+                <el-table-column type="selection" width="50">
+                </el-table-column>
+                <el-table-column label="序号" type="index" width="100px" prop="uid">
+                </el-table-column>
+                <el-table-column label="课程名称" prop="course.courseName">
+                </el-table-column>
+                <el-table-column label="选课人" prop="user.name">
+                </el-table-column>
+                <el-table-column align="right" width="200px">
+                    <template slot="header" slot-scope="scope">
+                        <el-input v-model="search" size="mini" placeholder="输入选课人搜索"  :blur="searchCourseUser"/>
+                    </template>
+                    <template slot-scope="scope">
+                        <el-button size="mini" @click="handleEdit(scope.$index, scope.row)">修改</el-button>
+                        <el-button size="mini" type="danger" @click="handleDelete(scope.$index, scope.row)">详情
+                        </el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </template>
+
+        <br />
+        <el-row>
+            <el-button type="warning" @click="delAll()">删除选中</el-button>
+        </el-row>
+
+        <!--  分页 -->
+        <template>
+            <div class="block" align="right">
+                <el-pagination @size-change="handleSizeChange" @current-change="handleCurrentChange"
+                               :current-page="currentPage" :page-sizes="[3, 4, 5, 6]" :page-size="pageSize"
+                               layout="total, sizes, prev, pager, next, jumper" :total="totalCount">
+                </el-pagination>
+            </div>
+        </template>
+    </div>
+
+    <!--修改选课-->
+    <el-dialog title="修改选课" :visible.sync="dialogFormVisible1">
+        <el-form ref="ruleForm" :model="ruleForm" label-width="80px">
+            <el-form-item label="课程名称" prop="cid">
+                <el-select v-model="ruleForm.cid" placeholder="请选择课程">
+                    <el-option v-for="item in courses" :value="item.cid" :label="item.courseName"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="选课人">
+                <el-input v-model="ruleForm.user.name" style="width: 210px;" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="联系方式">
+                <el-input v-model="ruleForm.user.phone" style="width: 210px;" disabled></el-input>
+            </el-form-item>
+        </el-form>
+        <span slot="footer" class="dialog-footer">
+                <el-button @click="dialogFormVisible1 = false">取 消</el-button>
+                <el-button type="primary" @click="submitForm">确 定</el-button>
+            </span>
+    </el-dialog>
+
+    <!--结尾-->
+    <!--查看选课-->
+    <el-dialog title="选课信息" :visible.sync="dialogFormVisible2">
+        <el-form ref="ruleForm" :model="ruleForm" label-width="80px">
+            <el-form-item label="课程名称">
+                <el-input v-model="ruleForm.course.courseName" style="width: 210px;" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="课程类型" >
+                <el-input v-if="ruleForm.course.courseType==1" style="width: 210px;" value="Java" disabled></el-input>
+                <el-input v-if="ruleForm.course.courseType==2" style="width: 210px;" value="数据库" disabled></el-input>
+                <el-input v-if="ruleForm.course.courseType==3" style="width: 210px;" value="前端" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="课程价格">
+                <el-input v-model="ruleForm.course.coursePrice" style="width: 210px;" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="选课人">
+                <el-input v-model="ruleForm.user.name" style="width: 210px;" disabled></el-input>
+            </el-form-item>
+            <el-form-item label="联系方式">
+                <el-input v-model="ruleForm.user.phone" style="width: 210px;" disabled></el-input>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+    <!--结尾-->
+
+
+</div>
+
+</body>
+<script>
+    axios.defaults.withCredentials = true
+    new Vue({
+        el: "#app",
+        data: {
+            /* 分页参数 */
+            tableData: [],
+            currentPage: 1,
+            totalCount: '',
+            pageSize: 5,
+            /* 条件查询 */
+            search: '',
+            //批量删除存放选中的复选框
+            multipleSelection: [],
+            //批量删除存放的uid
+            delarr: [],
+            /*选项卡*/
+            inputVisible: true,
+            disable: false,
+            //修改的对话框
+            dialogFormVisible1: false,
+            //详情的对话框
+            dialogFormVisible2: false,
+            //表单字段
+            ruleForm: {
+                cid: '',
+                course: '',
+                user: '',
+                courseImage: '',
+                courseVideo: ''
+            },
+            courses: []
+        },created(){
+            //自定义的分页方法
+            this.getCourseUserByPage();
+        },
+        methods: {
+            getCourseUserByPage(){
+                //设置前端向后台提交的数据
+                var param = {
+                    currentPage : this.currentPage,
+                    pageSize : this.pageSize,
+                    queryString : this.search
+                }
+                //异步调用方法查询分页数据
+                axios.post("/course-user/getCourseUserByPage",param).then(res => {
+                    //数据是否获取成功
+                    if(res.data.flag){
+                    //将分页数据中总数赋值vue对象
+                    this.totalCount = res.data.data.totalCount;
+                    //将分页数据赋值vue对象
+                    this.tableData = res.data.data.rows;
+                }else {
+                    //弹出消息
+                    this.$message.error(res.data.message);
+                }
+            })
+            },
+            searchCourseUser(){
+                //调用分页的方法
+                this.getCourseUserByPage();
+            },
+            handleSizeChange(val) {
+                //将要展示的页面数据设置到vue数据
+                this.pageSize = val;
+                //重新调用分页的方法
+                this.getCourseUserByPage();
+            },
+            handleCurrentChange(val) {
+                //设置当前的页面
+                this.currentPage = val;
+                //重新调用分页的方法
+                this.getCourseUserByPage();
+            },
+            handleSelectionChange(val) {
+                //val传递进来的数据就是复选框对应行的数据  将数据复制给vue定义的变量
+                this.multipleSelection = val;
+            },
+            delAll() {
+                //判断是否有选中多选框
+                if(this.multipleSelection.length <= 0){
+                    //弹窗提示要选择数据
+                    this.$message.error("请选择您要删除的数据！")
+                    //结束方法
+                    return;
+                }
+                //遍历选中对象集合
+                for (var i = 0; i < this.multipleSelection.length; i++) {
+                    //将数据放入到存放删除id的集合汇总
+                    this.delarr.push(this.multipleSelection[i].id);
+                }
+                //创建一个提示框，让用户选择是否删除数据
+                this.$confirm("您是否确定要删除选课","提示",{type:"warning"}).then(() =>{
+                    //确定要删除  异步将用户对应的id传递到后台
+                    //join()  方法  将数组转化为字符串进行传输  在数组数据中添加,隔开
+                    axios({
+                              url:"/course-user/delAll?cids="+this.delarr.join(),
+                    method:"post",
+            }).then(res => {
+                    //判断后台是否删除成功
+                    if(res.data.flag){
+                    //弹窗
+                    this.$message.success(res.data.message);
+                    //使用分页方法刷新数据
+                    this.getCourseUserByPage();
+                }else{
+                    //弹窗
+                    this.$message.error(res.data.message);
+                }
+            })
+            })
+            },
+            handleEdit(index, row) {
+                //将修改对话框打开
+                this.dialogFormVisible1 = true;
+                //获取所有课程的数据 异步获取所有的课程数据
+                axios.post('/course/getAll').then( res => {
+                    //不做是否可以获取的判断，将获取的数据直接给函数
+                    this.courses = res.data.data;
+            })
+                //将当前行的数据赋值给表单数据
+                this.ruleForm = row;
+            },
+            submitForm(formName) {
+                //如果选课对应的课程没有修改  没有必要进行提交
+                axios({
+                    url:'/course-user/edit',
+                    method:'post',
+                    data:this.ruleForm
+                }).then( res => {
+                    //判断是否修改成功
+                    if(res.data.flag){
+                    //修改成功 弹窗
+                    this.$message.success(res.data.message);
+                    //关闭修改对话框
+                    this.dialogFormVisible1 = false;
+                    //刷新数据  调用分页
+                    this.getCourseUserByPage();
+                }else {
+                    //弹窗
+                    this.$message.error(res.data.message);
+                }
+            })
+            },
+            handleDelete(index, row){
+                //将选课详情的对话框弹出
+                this.dialogFormVisible2 = true;
+                //将当前行的数据赋值给展示数据的ruleForm
+                this.ruleForm = row;
+            },
+            handleClose() {
+
+            }
+        }
+
+    })
+</script>
+
+</html>

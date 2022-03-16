@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<title></title>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="../../element-ui-2.13.0/lib/theme-chalk/index.css" />
+	<script type="text/javascript" src="../../vue/vue-v2.6.10.js"></script>
+	<script type="text/javascript" src="../../element-ui-2.13.0/lib/index.js"></script>
+	<script type="text/javascript" src="../../vue/axios-0.18.0.js"></script>
+</head>
+
+<body>
+<div id="app">
+	<!--上传课程-->
+	<el-tag type="info" effect="dark" closable="true" :disable-transitions="disable" @close="handleClose">添加课程</el-tag>
+	<div v-if="inputVisible">
+		<!--表单-->
+		<el-form  :model="ruleForm" :rules="rules" ref="ruleForm" label-width="100px" class="demo-ruleForm">
+			<el-form-item label="课程名称" prop="courseName">
+				<el-input v-model="ruleForm.courseName" style="width: 210px;"></el-input>
+			</el-form-item>
+			<el-form-item label="课程简介" prop="descs">
+				<el-input v-model="ruleForm.descs" style="width: 210px;"></el-input>
+			</el-form-item>
+			<el-form-item label="课程类型" prop="courseType">
+				<el-select v-model="ruleForm.courseType" placeholder="请选择课程类型">
+					<el-option label="Java" value="1"></el-option>
+					<el-option label="数据库" value="2"></el-option>
+					<el-option label="前端" value="3"></el-option>
+				</el-select>
+			</el-form-item>
+
+			<el-upload style="margin-left: 25px;" :on-remove="handleRemove" :on-exceed="handleExceed" :http-request="myUpload" class="upload-demo" ref="upload1"  :limit="1" :auto-upload="false">
+				<el-button slot="trigger" size="small" type="primary">选取图片</el-button>
+				<el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload(1)">上传到服务器</el-button>
+			</el-upload>
+			<img :src="dialogImageUrl" style="width: 100px;height: 100px;margin-left: 25px;" alt="" />
+
+			<el-upload style="margin-left: 25px;" :on-remove="handleRemove" :on-exceed="handleExceed" :http-request="myUpload" class="upload-demo" ref="upload2"  :limit="1" :auto-upload="false">
+				<el-button slot="trigger" size="small" type="primary">选取视频</el-button>
+				<el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload(2)">上传到服务器</el-button>
+			</el-upload>
+
+			<video controls autoplay  muted="muted" style="width: 100px;height: 100px;margin-left: 25px;margin-top: 5px;" :src="dialogVedioUrl"></video>
+
+			<el-form-item label="课程价格" prop="coursePrice">
+				<el-input v-model="ruleForm.coursePrice" style="width: 210px;"></el-input>
+			</el-form-item>
+			<el-form-item label="状态" prop="status">
+				<el-radio-group v-model="ruleForm.status">
+					<el-radio label="0">未上架</el-radio>
+					<el-radio label="1">上架</el-radio>
+					<el-radio label="2">下架</el-radio>
+				</el-radio-group>
+			</el-form-item>
+		</el-form>
+		<div slot="footer" class="dialog-footer" style="margin-left: 20px;">
+			<el-button @click="handleClose">取 消</el-button>
+			<el-button type="primary" @click="submitForm">确 定</el-button>
+		</div>
+	</div>
+	<!--结尾-->
+</div>
+</body>
+<script>
+	axios.defaults.withCredentials = true
+	new Vue({
+		el: "#app",
+		data: {
+			/*校验的字段*/
+			ruleForm: {
+				courseName: '',
+				descs: '',
+				courseType: '',
+				coursePrice: '',
+			},
+			/*规则*/
+			rules: {
+				courseName: [{
+					required: true,
+					message: '请输入课程名称',
+					trigger: 'blur'
+				}, ],
+				descs: [{
+					required: true,
+					message: '请选择课程简介',
+					trigger: 'blur'
+				}],
+				courseType: [{
+					required: true,
+					message: '请选择课程类型',
+					trigger: 'change'
+				}],
+				coursePrice: [{
+					required: true,
+					message: '请输入课程价格',
+					trigger: 'blur'
+				}],
+				status: [{
+					required: true,
+					message: '请至少选择一个状态',
+					trigger: 'change'
+				}]
+			},
+			/*文件上传*/
+			dialogImageUrl: '',
+			dialogVedioUrl: '',
+			/*选项卡*/
+			inputVisible: true,
+			disable: false,
+		},
+		methods: {
+			handleClose() {
+				//关闭页面的方法  回到展示页面
+				location.href = "/edu_page/html/course/index.html";
+			},
+			submitUpload(value) {
+				//点击开始上传文件   不是使用该方法上传的而是调用对应的方法
+				//判断到底上传的是图片还是视频
+				if(value == 1){
+					//需要上传的是图片 使用ref值调用上传的方法
+					this.$refs['upload1'].submit();
+				}else {
+					//上传视频
+					this.$refs['upload2'].submit();
+				}
+			},
+			myUpload(content) {
+				//创建一个处理文件上传对象FormData
+				var formData = new FormData();
+				//在对象中将上传的文件添加
+				formData.append("file",content.file);
+				//使用异步上传文件
+				axios({
+					url : '/course/upload',
+					method : 'post',
+					data : formData
+				}).then( res => {
+					//判断是否上传成功
+					if(res.data.flag){
+					//判断上传的文件是视频还是图片
+					if(res.data.status == 1){
+						//上传的是图片
+						this.dialogImageUrl = res.data.data;
+					}else{
+						//上传的是视频
+						this.dialogVedioUrl = res.data.data;
+					}
+				}else {
+					//上传失败弹窗
+					this.$message.error(res.data.message);
+				}
+			})
+			},
+			handleRemove(file, fileList) {
+				//删除已经上传图片的方法
+				//创建一个变量 将要删除的文件名称得到
+				var fileName = file.name;
+				//截取文件名，将文件名的后缀截取到
+				fileName = fileName.substring(fileName.lastIndexOf("."));
+				//如果我们上传成功了  会在图片或者视频变量中存放上传成功的数据
+				if(this.dialogImageUrl.indexOf(fileName) != -1){
+					//表示我们需要删除的是图片  将文件名设置为图片展示名称
+					fileName = this.dialogImageUrl;
+					//将上传成功后展示设置为空
+					this.dialogImageUrl = "";
+				}else if (this.dialogVedioUrl.indexOf(fileName) != -1){
+					//表示我们需要删除的是视频 将文件名设置为视频的名称
+					fileName = this.dialogVedioUrl;
+					//将视频预览设置为null
+					this.dialogVedioUrl = "";
+				}else {
+					//证明图片或者视频还没有进行上传
+					return;
+				}
+				//异步调用方法将图片或者视频删除
+				axios({
+					url:'/course/removeFile?fileName='+fileName,
+					method:'post'
+				}).then( res => {
+					//打印后台返回的消息
+					this.$message.success(res.data.message);
+			})
+			},
+			handleExceed(files, fileList) {
+				//内容发生改变   在数据改变的时候调用这个方法 可以自己在方法中查看怎么操作
+
+			},
+			submitForm(formName) {//提交课程数据的方法
+				//根据验证规则验证表单数据的方法
+				this.$refs['ruleForm'].validate( val => {
+					//如果验证成功
+					if(val){
+						//前台页面图片和视频是否上传
+						if(this.dialogImageUrl.length > 0 && this.dialogVedioUrl.length > 0){
+							//如果所有的数据都没有问题  我们提交数据  将图片和视频的数据添加到对象中
+							this.ruleForm.courseImage = this.dialogImageUrl;
+							this.ruleForm.courseVideo = this.dialogVedioUrl;
+							//异步将数据提交到后台
+							axios({
+								url:'/course/addCourse',
+								method:'post',
+								data:this.ruleForm
+							}).then( res => {
+								//判断是否添加成功
+								if(res.data.flag){
+								//弹窗提示添加成功
+								this.$message.success(res.data.message);
+								//跳转到课程展示页
+								setTimeout("location.href = 'index.html'",1500);
+							}else {
+								//添加失败打印信息
+								this.$message.error(res.data.message);
+							}
+						})
+						}else{
+							//图片和视频没有上传
+							this.$message.error("请上传图片或者视频！");
+						}
+					}else {
+						//验证规则没有通过
+						this.$message.error("请认真填写数据！");
+			}
+			})
+			}
+		}
+	})
+</script>
+
+</html>

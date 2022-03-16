@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录</title>
+    <link rel="shortcut icon" href="../../favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" type="text/css" href="../../css/reset.css" />
+    <link rel="stylesheet" type="text/css" href="../../css/login.css" />
+    <script src="../../js/vue-v2.6.10.js"></script>
+    <script src="../../js/axios-0.18.0.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <div class="pos">
+            <div class="login">
+                <span class="close iconfont icon-close"></span>
+                <img src="../../img/login/loginlogo.png" alt="">
+                <ul>
+                    <li></li>
+                    <li class="phone" style="color: red;" v-text="msg"></li>
+                    <li></li>
+                </ul>
+                <form action="" id="form">
+                    <input type="text" class="tel" v-model="ruleForm.phone" @blur="checkPhone"  placeholder="请输入您的手机号">
+                    <input type="password" class="pass" v-model="ruleForm.password" @blur="checkPassword" placeholder="请输入密码">
+                    <em></em>
+                    <div class="loginbtn" style="margin-left: 110px;line-height: 40px;" @click="login">
+                        登陆
+                    </div>
+                </form>
+                <p>
+                    <span><a href="javascript:;">忘记密码</a></span>
+                    <span>
+                        还没有账号?
+                        <a href="register.html">点击注册</a>
+                    </span>
+                </p>
+                <ul>
+                    <li></li>
+                    <li class="phone">使用第三方软件登录</li>
+                    <li></li>
+                </ul>
+                <p class="getCenter">
+                    <img src="../../img/login/wx.png" alt="">
+                    <img src="../../img/login/qq.png" alt="">
+                    <img src="../../img/login/sina.png" alt="">
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    new Vue({
+        el: "#app",
+        data: {
+            ruleForm:{
+                phone: '',
+                password: ''
+            },
+            msg: '',
+            phone_flae : false,
+            password_flag : false
+        },
+        methods: {
+            checkPhone(){
+                //判断密码不能为空或者空串
+                if (this.ruleForm.phone == null || this.ruleForm.phone.trim()==""){
+                    //消息提示
+                    this.msg = "手机号不能为空哦";
+                    //将手机验证的数据设置为否
+                    this.phone_flag = false;
+                }else{
+                    //设置一个正则表达式
+                    var rule = /^1[3-9][0-9]{9}$/;
+                    //通过正则表达式判断手机号是否合格
+                    if (rule.test(this.ruleForm.phone)){
+                        //通过异步的方法做验证
+                        axios.post('/user/checkPhone?phone='+this.ruleForm.phone).then(res=>{
+                            //简化操作  无论手机号是否注册都将消息展示
+                            this.msg = res.data.message;
+                            //根据判断将手机验证结果赋值
+                            this.phone_flag = !res.data.flag;
+                        })
+                    }else{
+                        //如果手机号不符合规则 页面提示
+                        this.msg = "请输入正确的手机号";
+                        //将手机验证的数据设置为否
+                        this.phone_flag = false;
+                    }
+                }
+            },
+            checkPassword(){
+                //判断密码不能为空或者空串
+                if (this.ruleForm.password == null || this.ruleForm.password.trim()==""){
+                    //消息提示
+                    this.msg = "密码不能为空哦";
+                    //将密码验证设置为否
+                    this.password_flag = false;
+                }else{
+                    //判断密码的长度 必须大于6位小于12位
+                    if (this.ruleForm.password.length>=6&&this.ruleForm.password.length<=12){
+                        //消息提示去掉
+                        this.msg = "";
+                        //将密码验证设置为是
+                        this.password_flag = true;
+                    }else{
+                        //不符合规定  消息提示
+                        this.msg = "密码必须是6到12位字符";
+                        //将密码验证设置为否
+                        this.password_flag = false;
+                    }
+                }
+            },
+            login(){
+                //判断手机号和密码是否符合规则
+                if (this.password_flag && this.password_flag){
+                    //异步将数据提交到后台登陆处理
+                    axios({
+                        url:'/user/loginUser',
+                        method:'post',
+                        data:this.ruleForm
+                    }).then(res => {
+                        //消息展示
+                        this.msg = res.data.message;
+                        //查看是否登录成功
+                        if (res.data.flag){
+                            //要求后台登陆成功后将用户数据传输到前台 将数据转化为json字符串
+                            var jstr = JSON.stringify(res.data.data);
+                            //使用vue对应的session使用方式将数据保存
+                            sessionStorage.setItem("user",jstr);
+                            //使用定时器1.5秒后跳转到首页
+                            setTimeout("location.href='/xiaou/index.html'",1500);
+                        }
+                    })
+                }else{
+                    //消息提示
+                    this.msg = "请认真填写数据哦";
+                }
+            }
+
+
+
+
+
+        },
+        created() {
+
+        },
+
+    })
+</script>
+
+
+</html>

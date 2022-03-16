@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<link rel="stylesheet" href="../element-ui-2.13.0/lib/theme-chalk/index.css" />
+		<script type="text/javascript" src="../vue/vue-v2.6.10.js"></script>
+		<script type="text/javascript" src="../element-ui-2.13.0/lib/index.js"></script>
+		<script type="text/javascript" src="../vue/axios-0.18.0.js"></script>
+		<style>
+			.el-header,
+			.el-footer {
+				background-image: url(../img/ba1.png);
+				background-repeat: no-repeat;
+				background-size: 100%;
+				color: #000;
+				text-align: center;
+				line-height: 60px;
+				font-size: 25px;
+				font-weight: 400;
+			}
+			
+			.el-aside {
+				background-color: rgb(232, 233, 238);
+				color: #5C637B;
+				text-align: left;
+				line-height: 200px;
+				height: 1015px;
+			}
+			
+			.el-main {
+				background-color: #E9EEF3;
+				color: #333;
+				text-align: center;
+				line-height: 160px;
+			}
+			
+			a {
+				/*设置超链接的颜色和 删除下划线*/
+				text-decoration: none;
+				display: block;
+			}
+			
+			.el-menu-item a {
+				color: #5C637B;
+			}
+			.el-menu-item:hover a,
+			.el-menu-item.is-active a {
+				color: #0073CC;
+				font-size: 20px;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div id="app">
+			<el-container>
+				<el-header>
+					<div style="float: left;">优学管理系统</div>
+					<div style="float: right;font-size: 17px;">
+						<el-link type="success" :underline="false" style="font-size: 17px;">返回前台</el-link>
+						欢迎您:<span>{{user.name}}</span>
+						<el-link type="primary" style="font-size: 17px;" :underline="false" @click="logout">退出</el-link>
+					</div>
+				</el-header>
+				<el-container>
+					<el-aside width="200px">
+						<el-menu default-active="2" style="font-size: 12px;" class="el-menu-vertical-demo"  background-color="rgb(232,233,238)" text-color="rgb(99,103,117)" active-text-color="#0073CC">
+							<el-submenu index="1">
+								<template slot="title">
+									<i class="el-icon-location"></i>
+									<span>快速通道</span>
+								</template>
+								<el-menu-item-group>
+									<el-menu-item index="1-1">
+										<a href="User/index.html" target="main">用户管理</a>
+									</el-menu-item>
+									<el-menu-item index="1-2">
+										<a href="course/index.html" target="main">课程管理</a>
+									</el-menu-item>
+								</el-menu-item-group>
+								<el-menu-item index="1-3">
+									<a href="conrse_user/index.html" target="main">报名课程管理</a>
+								</el-menu-item>
+								</el-menu-item-group>
+							</el-submenu>
+						</el-menu>
+					</el-aside>
+					<el-main style="padding: 0px;">
+						<iframe name="main" width="100%" height="100%" frameborder="0"></iframe>
+					</el-main>
+				</el-container>
+			</el-container>
+		</div>
+
+	</body>
+	<script>
+		axios.defaults.withCredentials = true
+		new Vue({
+			el: "#app",
+			data: {
+				user:''
+			},//在页面加载后执行的钩子函数
+			mounted(){
+				//异步获取当前登陆用户的数据
+				axios({
+					url:'/user/getLoginUser',
+					method : 'post'
+				}).then(res => {//res相当于后台返回的response
+					//判断是否获取到登陆的用户数据
+					if(res.data.flag){
+					//获取到登陆数据 将数据绑定到vue数据中
+					this.user = res.data.data;
+					}else{
+						//弹窗 告诉使用者  没有登陆 不能使用功能
+						this.$message.error(res.data.message);
+						//设置一个定时器 跳转到登陆页面
+						setTimeout("location.href='/edu_page/html/login.html'",1500);
+					}
+				})
+			},
+			methods: {
+				logout(){
+					//添加一个是否确认退出的弹窗
+					this.$confirm('您确定要退出吗？','提示',{
+						confirmButtonText: '确定',
+						cancelButtonText: '取消'
+					}).then(() =>{
+						//异步方法  退出登陆
+						axios({
+								  url:'/user/loginOut',
+								  method:'post'
+							  }).then((res => {
+							//退出后台弹窗
+							this.$message.success(res.data.message);
+					//设置一个定时器 跳转到登陆页面
+					setTimeout("location.href='/edu_page/html/login.html'",1500);
+				}))
+				}).catch(() => {
+						this.$message.error("用户取消");
+				})
+				}
+			}
+		})
+	</script>
+
+</html>
